@@ -1,48 +1,94 @@
 // Offline IGDTUW Student Bot by Ishika Pandey
 
+// bot.js
 const chatWindow = document.getElementById("chat-window");
 const userInput = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-btn");
 
-// Predefined responses
-const responses = {
-  "branches": "IGDTUW offers B.Tech in: \n- CSE-AI\n- CSE-DS\n- IT\n- ECE\n- Mechanical\n- Civil",
-  "placements": `Placements info:\n- Avg Package: ₹12-15 LPA\n- Highest: ₹42 LPA (CSE)\n- Top Recruiters: Microsoft, Google, Infosys, TCS, Amazon`,
-  "hostel": "Hostels are comfortable, safe, and well-managed with gyms, common rooms, and mess facilities.",
-  "labs": "Labs are well-equipped for all branches including Computer, Electronics, Mechanical, and Civil labs.",
-  "faculty": "Faculty members are supportive and approachable, helping students in academics and projects.",
-  "clubs": `Cultural & extracurriculars:\n- Clubs: TDIC, APD, Coding, Robotics, Music, Dance, Drama\n- Events: Annual APD fest, hackathons, cultural nights`,
-  "cse": "CSE branch focuses on AI, DS, and Software Development. Avg Package: ₹12-15 LPA, Highest: ₹42 LPA. Labs include AI/ML and coding labs.",
-  "ece": "ECE branch focuses on Embedded Systems, VLSI, Communication. Avg Package: ₹12 LPA, Labs include electronics and communication labs.",
-  "it": "IT branch focuses on Web Dev, Networking, Cloud. Avg Package: ₹10-12 LPA, Labs include programming and networking labs.",
-  "me": "Mechanical Engineering emphasizes Design, Thermodynamics, Robotics. Avg Package: ₹8-10 LPA. Labs include CAD/CAM and Robotics workshops.",
-  "ce": "Civil Engineering focuses on Structural Design, Environmental Engineering. Avg Package: ₹6-8 LPA. Labs include Material Testing and CAD labs."
-};
+let knowledgeBase;
 
-// Helper to pick a response
+// Load structured knowledge
+fetch("placements.json")
+  .then(res => res.json())
+  .then(data => knowledgeBase = data)
+  .catch(err => console.error("Failed to load knowledge base:", err));
+
+// Generate bot response
 function getResponse(question) {
   const q = question.toLowerCase();
 
-  if (q.includes("branch")) return responses["branches"];
-  if (q.includes("placement") || q.includes("package")) return responses["placements"];
-  if (q.includes("hostel")) return responses["hostel"];
-  if (q.includes("lab")) return responses["labs"];
-  if (q.includes("faculty")) return responses["faculty"];
-  if (q.includes("club") || q.includes("cultural") || q.includes("activity")) return responses["clubs"];
-  if (q.includes("cse")) return responses["cse"];
-  if (q.includes("ece")) return responses["ece"];
-  if (q.includes("it")) return responses["it"];
-  if (q.includes("mechanical") || q.includes("me")) return responses["me"];
-  if (q.includes("civil") || q.includes("ce")) return responses["ce"];
+  // Branches
+  if (q.includes("branch")) {
+    return `IGDTUW offers the following branches: ${knowledgeBase.branches.join(", ")}.`;
+  }
 
-  return "I am a student-friendly bot. I can answer questions about branches, placements, hostels, labs, faculty, and cultural activities at IGDTUW.";
+  // Branch descriptions
+  if (q.includes("mae") || q.includes("mac") || q.includes("dmam")) {
+    if (q.includes("mae")) return knowledgeBase.branchDetails["MAE"];
+    if (q.includes("mac")) return knowledgeBase.branchDetails["MaC"];
+    if (q.includes("dmam")) return knowledgeBase.branchDetails["DMAM"];
+  }
+
+  // Placements
+  if (q.includes("placement") || q.includes("package")) {
+    const branchMatch = knowledgeBase.branches.find(b => q.includes(b.toLowerCase()));
+    if (branchMatch) {
+      const data = knowledgeBase.placementData[branchMatch];
+      return `For ${branchMatch}, approximately ${data.placementRate} of students get placed. Average package: ${data.averagePackage}. Highest package: ${data.highestPackage}.`;
+    }
+    // General placement info
+    return knowledgeBase.branches.map(b => {
+      const d = knowledgeBase.placementData[b];
+      return `${b}: Placed ${d.placementRate}, Avg ${d.averagePackage}, Highest ${d.highestPackage}`;
+    }).join("\n");
+  }
+
+  // Campus life
+  if (q.includes("campus") || q.includes("life") || q.includes("hostel") || q.includes("library")) {
+    return `${knowledgeBase.campusLife}\nLibrary: ${knowledgeBase.library}`;
+  }
+
+  // Faculty
+  if (q.includes("faculty") || q.includes("teacher") || q.includes("professor")) {
+    return knowledgeBase.faculty;
+  }
+
+  // Research / innovation
+  if (q.includes("research") || q.includes("innovation") || q.includes("co-e") || q.includes("incubation")) {
+    return knowledgeBase.research;
+  }
+
+  // Fests / cultural
+  if (q.includes("fest") || q.includes("event") || q.includes("cultural")) {
+    return knowledgeBase.fests;
+  }
+
+  return "I am a student-friendly bot. I can answer questions about branches, placements, campus life, faculty, research, and cultural activities at IGDTUW.";
 }
 
-// Append message to chat window
+// Append message with optional like button
 function appendMessage(text, sender) {
   const div = document.createElement("div");
   div.classList.add("message", sender === "user" ? "user-message" : "bot-message");
   div.textContent = text;
+
+  if (sender === "bot") {
+    const likeBtn = document.createElement("button");
+    likeBtn.textContent = "❤️";
+    likeBtn.classList.add("like-btn");
+
+    const likeCount = document.createElement("span");
+    likeCount.textContent = "0";
+    likeCount.classList.add("like-count");
+
+    likeBtn.addEventListener("click", () => {
+      likeCount.textContent = parseInt(likeCount.textContent) + 1;
+    });
+
+    div.appendChild(likeBtn);
+    div.appendChild(likeCount);
+  }
+
   chatWindow.appendChild(div);
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
@@ -58,7 +104,7 @@ function sendMessage() {
   setTimeout(() => {
     const answer = getResponse(question);
     appendMessage(answer, "bot");
-  }, 300); // small delay for realism
+  }, 300);
 }
 
 // Event listeners
@@ -66,3 +112,4 @@ sendBtn.addEventListener("click", sendMessage);
 userInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendMessage();
 });
+
